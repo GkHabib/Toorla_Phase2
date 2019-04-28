@@ -1,5 +1,6 @@
 package toorla.visitor;
 
+import sun.jvm.hotspot.debugger.cdbg.Sym;
 import toorla.ast.Program;
 import toorla.ast.declaration.classDecs.ClassDeclaration;
 import toorla.ast.declaration.classDecs.EntryClassDeclaration;
@@ -18,6 +19,9 @@ import toorla.ast.statement.*;
 import toorla.ast.statement.localVarStats.LocalVarDef;
 import toorla.ast.statement.localVarStats.LocalVarsDefinitions;
 import toorla.ast.statement.returnStatement.Return;
+import toorla.symbolTable.SymbolTable;
+import toorla.symbolTable.exceptions.ItemAlreadyExistsException;
+import toorla.symbolTable.symbolTableItem.SymbolTableClassItem;
 
 public class TreePrinter implements Visitor<Void> {
     @Override
@@ -333,13 +337,34 @@ public class TreePrinter implements Visitor<Void> {
 
     @Override
     public Void visit(ClassDeclaration classDeclaration) {
-        System.out.print("(class ");
+        Program.addAstPrinterResult("(class ");
+        String name = classDeclaration.getName().getName();
+
+        try{
+            SymbolTable.top.put(new SymbolTableClassItem(name));
+        }
+        catch(ItemAlreadyExistsException e){
+            try{
+                String new_name = "temp" + "_" + Program.getNewTempVarNumber() + "_" + name;
+                SymbolTable.top.put(new SymbolTableClassItem((new_name)));
+            }
+            catch(ItemAlreadyExistsException e1){
+                // dige kheili bad shansi:))
+            }
+
+            Program.addError("Error:Line:" + Integer.toString(classDeclaration.getName().line)
+                    + ":Redefinition of Class " + classDeclaration.getName().getName());
+
+        }
+        SymbolTable.push(new SymbolTable(SymbolTable.top));
+
         classDeclaration.getName().accept(this);
         System.out.print(" ");
         if (classDeclaration.getParentName().getName() != null) {
             classDeclaration.getParentName().accept(this);
             System.out.print(" ");
         }
+
         for (ClassMemberDeclaration md : classDeclaration.getClassMembers())
             md.accept(this);
         System.out.println(")");
@@ -411,10 +436,16 @@ public class TreePrinter implements Visitor<Void> {
 
     @Override
     public Void visit(Program program) {
-        System.out.print("(");
+//        System.out.print("(");
+        Program.addAstPrinterResult("(");
+        SymbolTable.push(new SymbolTable());
+        ClassDeclaration Any = new ClassDeclaration(new Identifier("Any"), null);
+        program.addClass(Any);
+
         for (ClassDeclaration cd : program.getClasses())
             cd.accept(this);
-        System.out.println(")");
+
+        Program.addAstPrinterResult(")");
         return null;
     }
 }
