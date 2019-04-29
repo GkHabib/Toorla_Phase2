@@ -44,6 +44,8 @@ public class Program extends Tree {
     public static void addError(String err) {
         errors.add(err);
     }
+    public static Boolean hasError() { return (errors.size() > 0); }
+    public static ArrayList<String> getErrors() { return errors; }
 
     public static void addAstPrinterResult(String str) {
         astPrinterResult.add(str);

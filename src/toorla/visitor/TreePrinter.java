@@ -1,6 +1,6 @@
 package toorla.visitor;
 
-import sun.jvm.hotspot.debugger.cdbg.Sym;
+//import sun.jvm.hotspot.debugger.cdbg.Sym;
 import toorla.ast.Program;
 import toorla.ast.declaration.VariableDeclaration;
 import toorla.ast.declaration.classDecs.ClassDeclaration;
@@ -28,53 +28,92 @@ import toorla.symbolTable.symbolTableItem.SymbolTableMethodItem;
 import toorla.symbolTable.symbolTableItem.varItems.LocalVariableSymbolTableItem;
 import toorla.types.Type;
 
+import java.util.ArrayList;
+
 public class TreePrinter implements Visitor<Void> {
     @Override
     public Void visit(PrintLine printLine) {
-        System.out.print("(print ");
-        printLine.getArg().accept(this);
-        System.out.println(")");
+        if(Program.passNum == 1) {
+            //do nothing!
+        }
+        else {
+            System.out.print("(print ");
+            printLine.getArg().accept(this);
+            System.out.println(")");
+        }
         return null;
     }
 
     @Override
     public Void visit(Assign assign) {
-        System.out.print("(= ");
-        assign.getLvalue().accept(this);
-        System.out.print(" ");
-        assign.getRvalue().accept(this);
-        System.out.println(")");
+        if(Program.passNum == 1) {
+            //do nothing!
+        }
+        else {
+            System.out.print("(= ");
+            assign.getLvalue().accept(this);
+            System.out.print(" ");
+            assign.getRvalue().accept(this);
+            System.out.println(")");
+        }
         return null;
     }
 
     @Override
     public Void visit(Block block) {
-        System.out.println("( ");
-        for (Statement s : block.body)
-            s.accept(this);
-        System.out.println(")");
+
+        if(Program.passNum == 1) {
+            SymbolTable.push(new SymbolTable(SymbolTable.top));
+            for (Statement s : block.body)
+                s.accept(this);
+            SymbolTable.pop();
+        }
+        else {
+            System.out.println("( ");
+            for (Statement s : block.body)
+                s.accept(this);
+            System.out.println(")");
+        }
         return null;
     }
 
     @Override
     public Void visit(Conditional conditional) {
-        System.out.print("(if ");
-        conditional.getCondition().accept(this);
-        System.out.print(" ");
-        conditional.getThenStatement().accept(this);
-        System.out.print(" ");
-        conditional.getElseStatement().accept(this);
-        System.out.println(")");
+
+        if(Program.passNum == 1) {
+            SymbolTable.push(new SymbolTable(SymbolTable.top));
+            conditional.getThenStatement().accept(this);
+            SymbolTable.pop();
+            SymbolTable.push(new SymbolTable(SymbolTable.top));
+            conditional.getElseStatement().accept(this);
+            SymbolTable.pop();
+        }
+        else {
+            System.out.print("(if ");
+            conditional.getCondition().accept(this);
+            System.out.print(" ");
+            conditional.getThenStatement().accept(this);
+            System.out.print(" ");
+            conditional.getElseStatement().accept(this);
+            System.out.println(")");
+        }
         return null;
     }
 
     @Override
     public Void visit(While whileStat) {
-        System.out.print("(while ");
-        whileStat.expr.accept(this);
-        System.out.print(" ");
-        whileStat.body.accept(this);
-        System.out.println(")");
+        if(Program.passNum == 1) {
+            SymbolTable.push(new SymbolTable(SymbolTable.top));
+            whileStat.body.accept(this);
+            SymbolTable.pop();
+        }
+        else {
+            System.out.print("(while ");
+            whileStat.expr.accept(this);
+            System.out.print(" ");
+            whileStat.body.accept(this);
+            System.out.println(")");
+        }
         return null;
     }
 
@@ -232,19 +271,34 @@ public class TreePrinter implements Visitor<Void> {
 
     @Override
     public Void visit(Break breakStat) {
-        System.out.println(breakStat);
+        if(Program.passNum == 1) {
+            //do nothing!
+        }
+        else {
+            System.out.println(breakStat);
+        }
         return null;
     }
 
     @Override
     public Void visit(Continue continueStat) {
-        System.out.println(continueStat);
+        if(Program.passNum == 1) {
+            //do nothing!
+        }
+        else {
+            System.out.println(continueStat);
+        }
         return null;
     }
 
     @Override
     public Void visit(Skip skip) {
-        System.out.println(skip);
+        if(Program.passNum == 1) {
+            //do nothing!
+        }
+        else {
+            System.out.println(skip);
+        }
         return null;
     }
 
@@ -316,27 +370,61 @@ public class TreePrinter implements Visitor<Void> {
 
     @Override
     public Void visit(LocalVarDef localVarDef) {
-        System.out.print("(var ");
-        localVarDef.getLocalVarName().accept(this);
-        System.out.print(" ");
-        localVarDef.getInitialValue().accept(this);
-        System.out.println(")");
+        System.out.println("ok");
+        if(Program.passNum == 1) {
+            Integer index = MethodDeclaration.getNewVarIndex();
+            String name = localVarDef.getLocalVarName().getName();
+            try {
+                SymbolTable.top.put(new LocalVariableSymbolTableItem(name, index));
+            }
+            catch (ItemAlreadyExistsException e) {
+                String newName = "temp" + "_" + Program.getNewTempVarNumber() + "_" + name;
+
+                try {
+                    SymbolTable.top.put(new LocalVariableSymbolTableItem(newName, index));
+                }
+                catch (ItemAlreadyExistsException e1) {
+                    //dige hichi... :(
+                }
+                Program.addError("Error:Line:" + Integer.toString(localVarDef.getLocalVarName().line)
+                        + ":Redefinition of Local Variable " + localVarDef.getLocalVarName().getName()+ " in current scope" + "\n");
+
+            }
+
+        }
+        else {
+            System.out.print("(var ");
+            localVarDef.getLocalVarName().accept(this);
+            System.out.print(" ");
+            localVarDef.getInitialValue().accept(this);
+            System.out.println(")");
+        }
         return null;
     }
 
     @Override
     public Void visit(IncStatement incStatement) {
-        System.out.print("(++ ");
-        incStatement.getOperand().accept(this);
-        System.out.println(")");
+        if(Program.passNum == 1) {
+            //do nothing!
+        }
+        else {
+            System.out.print("(++ ");
+            incStatement.getOperand().accept(this);
+            System.out.println(")");
+        }
         return null;
     }
 
     @Override
     public Void visit(DecStatement decStatement) {
-        System.out.print("(-- ");
-        decStatement.getOperand().accept(this);
-        System.out.println(")");
+        if(Program.passNum == 1) {
+            //do nothing!
+        }
+        else {
+            System.out.print("(-- ");
+            decStatement.getOperand().accept(this);
+            System.out.println(")");
+        }
         return null;
     }
 
@@ -369,33 +457,57 @@ public class TreePrinter implements Visitor<Void> {
             Program.addClassSymbolTable(name, SymbolTable.top);
             SymbolTable.pop();
         }
-
-
-        classDeclaration.getName().accept(this);
-        System.out.print(" ");
-        if (classDeclaration.getParentName().getName() != null) {
-            classDeclaration.getParentName().accept(this);
+        else {
+            classDeclaration.getName().accept(this);
             System.out.print(" ");
-        }
+            if (classDeclaration.getParentName() != null) {
+                classDeclaration.getParentName().accept(this);
+                System.out.print(" ");
+            }
 
-        for (ClassMemberDeclaration md : classDeclaration.getClassMembers())
-            md.accept(this);
-        System.out.println(")");
+            for (ClassMemberDeclaration md : classDeclaration.getClassMembers())
+                md.accept(this);
+            System.out.println(")");
+        }
         return null;
     }
 
     @Override
     public Void visit(EntryClassDeclaration entryClassDeclaration) {
-        System.out.print("( entry class ");
-        entryClassDeclaration.getName().accept(this);
-        System.out.print(" ");
-        if (entryClassDeclaration.getParentName().getName() != null) {
-            entryClassDeclaration.getParentName().accept(this);
-            System.out.print(" ");
+        String name = entryClassDeclaration.getName().getName();
+
+        if(Program.passNum == 1) {
+            try {
+                SymbolTable.top.put(new SymbolTableClassItem(name));
+            } catch (ItemAlreadyExistsException e) {
+                try {
+                    String new_name = "temp" + "_" + Program.getNewTempVarNumber() + "_" + name;
+                    SymbolTable.top.put(new SymbolTableClassItem((new_name)));
+                } catch (ItemAlreadyExistsException e1) {
+                    // dige kheili bad shansi:))
+                }
+                Program.addError("Error:Line:" + Integer.toString(entryClassDeclaration.getName().line)
+                        + ":Redefinition of Class " + entryClassDeclaration.getName().getName() + "\n");
+            }
+            SymbolTable.push(new SymbolTable(SymbolTable.top));
+            for (ClassMemberDeclaration classmember : entryClassDeclaration.getClassMembers()) {
+                classmember.accept(this);
+            }
+            Program.addClassSymbolTable(name, SymbolTable.top);
+            SymbolTable.pop();
         }
-        for (ClassMemberDeclaration md : entryClassDeclaration.getClassMembers())
-            md.accept(this);
-        System.out.println(")");
+        else {
+            System.out.print("( entry class ");
+            entryClassDeclaration.getName().accept(this);
+            System.out.print(" ");
+            if (entryClassDeclaration.getParentName().getName() != null) {
+                entryClassDeclaration.getParentName().accept(this);
+                System.out.print(" ");
+            }
+            for (ClassMemberDeclaration md : entryClassDeclaration.getClassMembers())
+                md.accept(this);
+            System.out.println(")");
+        }
         return null;
     }
 
@@ -452,7 +564,7 @@ public class TreePrinter implements Visitor<Void> {
                 }
 
                 Program.addError("Error:Line:" + Integer.toString(parameterDeclaration.getIdentifier().line)
-                        + ":Redefinition of Local Variable " + parameterDeclaration.getIdentifier().getName() + "in current scope" + "\n");
+                        + ":Redefinition of Local Variable " + parameterDeclaration.getIdentifier().getName() + " in current scope" + "\n");
             }
         }
         else {
@@ -495,6 +607,7 @@ public class TreePrinter implements Visitor<Void> {
                 for (Statement stmt : methodDeclaration.getBody()) {
                     stmt.accept(this);
                 }
+                SymbolTable.pop();
             }
         }
         else {
@@ -536,7 +649,21 @@ public class TreePrinter implements Visitor<Void> {
         for (ClassDeclaration cd : program.getClasses())
             cd.accept(this);
 
-        Program.addAstPrinterResult(")");
+        if(Program.hasError()) {
+            ArrayList<String> errors = Program.getErrors();
+            for (String str: errors) {
+                System.out.print(str);
+            }
+            return null;
+        }
+
+        Program.passNum = 2;
+
+        System.out.print("(");
+        for (ClassDeclaration cd : program.getClasses())
+            cd.accept(this);
+        System.out.print(")");
+//        Program.addAstPrinterResult(")");
         return null;
     }
 }
