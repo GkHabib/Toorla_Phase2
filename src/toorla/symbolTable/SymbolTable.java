@@ -11,6 +11,7 @@ public class SymbolTable {
     private SymbolTable pre;
     private Map<String, SymbolTableItem> items;
 
+
     // Static members region
 
     public static SymbolTable top;

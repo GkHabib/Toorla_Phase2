@@ -16,6 +16,15 @@ public class MethodDeclaration extends Declaration implements ClassMemberDeclara
     private ArrayList<ParameterDeclaration> args = new ArrayList<>();
     private ArrayList<Statement> body = new ArrayList<>();
 
+//*******************
+
+    private static Integer index = 1;
+
+    public static Integer getNewVarIndex() { return index++; }
+    public static void setVarIndex() { index = 1;}
+
+//*******************
+
     public MethodDeclaration(Identifier name) {
         this.name = name;
         this.accessModifier = AccessModifier.ACCESS_MODIFIER_PUBLIC;

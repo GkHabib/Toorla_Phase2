@@ -2,6 +2,7 @@ package toorla.visitor;
 
 import sun.jvm.hotspot.debugger.cdbg.Sym;
 import toorla.ast.Program;
+import toorla.ast.declaration.VariableDeclaration;
 import toorla.ast.declaration.classDecs.ClassDeclaration;
 import toorla.ast.declaration.classDecs.EntryClassDeclaration;
 import toorla.ast.declaration.classDecs.classMembersDecs.ClassMemberDeclaration;
@@ -22,6 +23,10 @@ import toorla.ast.statement.returnStatement.Return;
 import toorla.symbolTable.SymbolTable;
 import toorla.symbolTable.exceptions.ItemAlreadyExistsException;
 import toorla.symbolTable.symbolTableItem.SymbolTableClassItem;
+import toorla.symbolTable.symbolTableItem.SymbolTableFieldItem;
+import toorla.symbolTable.symbolTableItem.SymbolTableMethodItem;
+import toorla.symbolTable.symbolTableItem.varItems.LocalVariableSymbolTableItem;
+import toorla.types.Type;
 
 public class TreePrinter implements Visitor<Void> {
     @Override
@@ -337,26 +342,34 @@ public class TreePrinter implements Visitor<Void> {
 
     @Override
     public Void visit(ClassDeclaration classDeclaration) {
-        Program.addAstPrinterResult("(class ");
+//        Program.addAstPrinterResult("(class ");
         String name = classDeclaration.getName().getName();
 
-        try{
-            SymbolTable.top.put(new SymbolTableClassItem(name));
-        }
-        catch(ItemAlreadyExistsException e){
+        if(Program.passNum == 1){
+
             try{
-                String new_name = "temp" + "_" + Program.getNewTempVarNumber() + "_" + name;
-                SymbolTable.top.put(new SymbolTableClassItem((new_name)));
+                SymbolTable.top.put(new SymbolTableClassItem(name));
             }
-            catch(ItemAlreadyExistsException e1){
-                // dige kheili bad shansi:))
+            catch(ItemAlreadyExistsException e) {
+                try {
+                    String new_name = "temp" + "_" + Program.getNewTempVarNumber() + "_" + name;
+                    SymbolTable.top.put(new SymbolTableClassItem((new_name)));
+                } catch (ItemAlreadyExistsException e1) {
+                    // dige kheili bad shansi:))
+                }
+
+                Program.addError("Error:Line:" + Integer.toString(classDeclaration.getName().line)
+                        + ":Redefinition of Class " + classDeclaration.getName().getName() + "\n");
+
             }
-
-            Program.addError("Error:Line:" + Integer.toString(classDeclaration.getName().line)
-                    + ":Redefinition of Class " + classDeclaration.getName().getName());
-
+            SymbolTable.push(new SymbolTable(SymbolTable.top));
+            for (ClassMemberDeclaration classmember : classDeclaration.getClassMembers()) {
+                classmember.accept(this);
+            }
+            Program.addClassSymbolTable(name, SymbolTable.top);
+            SymbolTable.pop();
         }
-        SymbolTable.push(new SymbolTable(SymbolTable.top));
+
 
         classDeclaration.getName().accept(this);
         System.out.print(" ");
@@ -388,42 +401,118 @@ public class TreePrinter implements Visitor<Void> {
 
     @Override
     public Void visit(FieldDeclaration fieldDeclaration) {
-        System.out.print("(");
-        System.out.print(fieldDeclaration.getAccessModifier());
-        System.out.print(" field ");
-        fieldDeclaration.getIdentifier().accept(this);
-        System.out.print(" ");
-        System.out.print(fieldDeclaration.getType());
-        System.out.println(")");
+        String name = fieldDeclaration.getName().getName();
+
+        if(Program.passNum == 1){
+            try {
+                SymbolTable.top.put(new SymbolTableFieldItem(name));
+            }
+            catch (ItemAlreadyExistsException e) {
+                try {
+                    String new_name = "temp" + "_" + Program.getNewTempVarNumber() + "_" + name;
+                    SymbolTable.top.put(new SymbolTableFieldItem((new_name)));
+                } catch (ItemAlreadyExistsException e1) {
+                    // dige kheili bad shansi:))
+                }
+
+                Program.addError("Error:Line:" + Integer.toString(fieldDeclaration.getName().line)
+                        + ":Redefinition of Field " + fieldDeclaration.getName().getName() + "\n");
+
+            }
+        }
+        else {
+            System.out.print("(");
+            System.out.print(fieldDeclaration.getAccessModifier());
+            System.out.print(" field ");
+            fieldDeclaration.getIdentifier().accept(this);
+            System.out.print(" ");
+            System.out.print(fieldDeclaration.getType());
+            System.out.println(")");
+        }
         return null;
     }
 
     @Override
     public Void visit(ParameterDeclaration parameterDeclaration) {
-        System.out.print("( ");
-        parameterDeclaration.getIdentifier().accept(this);
-        System.out.print(" : ");
-        System.out.print(parameterDeclaration.getType());
-        System.out.print(")");
+
+        String name = parameterDeclaration.getIdentifier().getName();
+        Integer index = MethodDeclaration.getNewVarIndex();
+        if(Program.passNum == 1) {
+            try {
+                SymbolTable.top.put(new LocalVariableSymbolTableItem(name, index));
+            }
+            catch (ItemAlreadyExistsException e) {
+
+                String new_name = "temp" + "_" + Program.getNewTempVarNumber() + "_" + name;
+                try {
+                    SymbolTable.top.put(new LocalVariableSymbolTableItem(new_name, index));
+                }
+                catch(ItemAlreadyExistsException e1){
+                    // dige kheili bad shansi:))
+                }
+
+                Program.addError("Error:Line:" + Integer.toString(parameterDeclaration.getIdentifier().line)
+                        + ":Redefinition of Local Variable " + parameterDeclaration.getIdentifier().getName() + "in current scope" + "\n");
+            }
+        }
+        else {
+            System.out.print("( ");
+            parameterDeclaration.getIdentifier().accept(this);
+            System.out.print(" : ");
+            System.out.print(parameterDeclaration.getType());
+            System.out.print(")");
+        }
+
         return null;
     }
 
     @Override
     public Void visit(MethodDeclaration methodDeclaration) {
-        System.out.print("(");
-        System.out.print(methodDeclaration.getAccessModifier());
-        System.out.print(" method ");
-        methodDeclaration.getName().accept(this);
-        for (ParameterDeclaration pd : methodDeclaration.getArgs()) {
-            pd.accept(this);
-            System.out.print(" ");
+
+        String name = methodDeclaration.getName().getName();
+
+        if(Program.passNum == 1) {
+            try {
+                SymbolTable.top.put(new SymbolTableMethodItem(name));
+            }
+            catch (ItemAlreadyExistsException e) {
+
+                try {
+                    String new_name = "temp" + "_" + Program.getNewTempVarNumber() + "_" + name;
+                    SymbolTable.top.put(new SymbolTableMethodItem((new_name)));
+                }
+                catch (ItemAlreadyExistsException e1) {
+                    // dige kheili bad shansi:))
+                }
+
+                Program.addError("Error:Line:" + Integer.toString(methodDeclaration.getName().line)
+                        + ":Redefinition of Method " + methodDeclaration.getName().getName() + "\n");
+                SymbolTable.push(new SymbolTable(SymbolTable.top));
+                MethodDeclaration.setVarIndex();
+                for (ParameterDeclaration pd : methodDeclaration.getArgs()) {
+                    pd.accept(this);
+                }
+                for (Statement stmt : methodDeclaration.getBody()) {
+                    stmt.accept(this);
+                }
+            }
         }
-        System.out.print(methodDeclaration.getReturnType());
-        System.out.println( " (" );
-        for (Statement stmt : methodDeclaration.getBody())
-            stmt.accept(this);
-        System.out.println( " ) " );
-        System.out.println(")");
+        else {
+            System.out.print("(");
+            System.out.print(methodDeclaration.getAccessModifier());
+            System.out.print(" method ");
+            methodDeclaration.getName().accept(this);
+            for (ParameterDeclaration pd : methodDeclaration.getArgs()) {
+                pd.accept(this);
+                System.out.print(" ");
+            }
+            System.out.print(methodDeclaration.getReturnType());
+            System.out.println(" (");
+            for (Statement stmt : methodDeclaration.getBody())
+                stmt.accept(this);
+            System.out.println(" ) ");
+            System.out.println(")");
+            }
         return null;
     }
 
@@ -437,10 +526,12 @@ public class TreePrinter implements Visitor<Void> {
     @Override
     public Void visit(Program program) {
 //        System.out.print("(");
-        Program.addAstPrinterResult("(");
+//        Program.addAstPrinterResult("(");
         SymbolTable.push(new SymbolTable());
         ClassDeclaration Any = new ClassDeclaration(new Identifier("Any"), null);
-        program.addClass(Any);
+        program.addClassFirst(Any);
+
+        Program.passNum = 1;
 
         for (ClassDeclaration cd : program.getClasses())
             cd.accept(this);

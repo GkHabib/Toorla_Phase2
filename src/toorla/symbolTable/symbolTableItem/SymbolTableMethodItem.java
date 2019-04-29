@@ -6,11 +6,9 @@ import java.util.ArrayList;
 
 public class SymbolTableMethodItem extends SymbolTableItem {
 
-    private ArrayList<Type> argList;
 
-    public SymbolTableMethodItem(String name, ArrayList<Type> argList) {
+    public SymbolTableMethodItem(String name) {
         this.name = name;
-        this.argList = argList;
     }
 
     @Override

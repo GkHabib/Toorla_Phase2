@@ -26,6 +26,12 @@ public class FieldDeclaration extends TypedVariableDeclaration implements ClassM
         this.accessModifier = modifier;
     }
 
+    public Identifier getName(){
+        return identifier;
+    }
+
+    public Type getType() { return type; }
+
     public AccessModifier getAccessModifier() {
         return accessModifier;
     }

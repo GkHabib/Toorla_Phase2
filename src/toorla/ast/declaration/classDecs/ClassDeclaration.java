@@ -27,6 +27,10 @@ public class ClassDeclaration extends Declaration {
 
     }
 
+    public ArrayList<ClassMemberDeclaration> getMembers() {
+        return members;
+    }
+
     public Identifier getName() {
         return name;
     }
