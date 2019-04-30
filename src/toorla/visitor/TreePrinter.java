@@ -22,6 +22,7 @@ import toorla.ast.statement.localVarStats.LocalVarsDefinitions;
 import toorla.ast.statement.returnStatement.Return;
 import toorla.symbolTable.SymbolTable;
 import toorla.symbolTable.exceptions.ItemAlreadyExistsException;
+import toorla.symbolTable.exceptions.ItemNotFoundException;
 import toorla.symbolTable.symbolTableItem.SymbolTableClassItem;
 import toorla.symbolTable.symbolTableItem.SymbolTableFieldItem;
 import toorla.symbolTable.symbolTableItem.SymbolTableMethodItem;
@@ -370,27 +371,25 @@ public class TreePrinter implements Visitor<Void> {
 
     @Override
     public Void visit(LocalVarDef localVarDef) {
-        System.out.println("ok");
+        Boolean hasError = false;
         if(Program.passNum == 1) {
             Integer index = MethodDeclaration.getNewVarIndex();
             String name = localVarDef.getLocalVarName().getName();
             try {
                 SymbolTable.top.put(new LocalVariableSymbolTableItem(name, index));
-            }
-            catch (ItemAlreadyExistsException e) {
+            } catch (ItemAlreadyExistsException e) {
                 String newName = "temp" + "_" + Program.getNewTempVarNumber() + "_" + name;
-
+                hasError = true;
                 try {
                     SymbolTable.top.put(new LocalVariableSymbolTableItem(newName, index));
-                }
-                catch (ItemAlreadyExistsException e1) {
+                } catch (ItemAlreadyExistsException e1) {
                     //dige hichi... :(
                 }
-                Program.addError("Error:Line:" + Integer.toString(localVarDef.getLocalVarName().line)
-                        + ":Redefinition of Local Variable " + localVarDef.getLocalVarName().getName()+ " in current scope" + "\n");
-
             }
-
+            if(hasError) {
+                Program.addError("Error:Line:" + Integer.toString(localVarDef.getLocalVarName().line)
+                        + ":Redefinition of Local Variable " + localVarDef.getLocalVarName().getName() + " in current scope" + "\n");
+            }
         }
         else {
             System.out.print("(var ");
@@ -592,13 +591,13 @@ public class TreePrinter implements Visitor<Void> {
                 try {
                     String new_name = "temp" + "_" + Program.getNewTempVarNumber() + "_" + name;
                     SymbolTable.top.put(new SymbolTableMethodItem((new_name)));
-                }
-                catch (ItemAlreadyExistsException e1) {
+                } catch (ItemAlreadyExistsException e1) {
                     // dige kheili bad shansi:))
                 }
 
                 Program.addError("Error:Line:" + Integer.toString(methodDeclaration.getName().line)
                         + ":Redefinition of Method " + methodDeclaration.getName().getName() + "\n");
+            }
                 SymbolTable.push(new SymbolTable(SymbolTable.top));
                 MethodDeclaration.setVarIndex();
                 for (ParameterDeclaration pd : methodDeclaration.getArgs()) {
@@ -608,7 +607,6 @@ public class TreePrinter implements Visitor<Void> {
                     stmt.accept(this);
                 }
                 SymbolTable.pop();
-            }
         }
         else {
             System.out.print("(");
