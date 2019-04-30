@@ -514,8 +514,10 @@ public class TreePrinter implements Visitor<Void> {
     public Void visit(FieldDeclaration fieldDeclaration) {
         String name = fieldDeclaration.getName().getName();
 
-        if(Program.passNum == 1){
+        if (Program.passNum == 1){
             try {
+                if(name.equals("length"))
+                    throw new ItemAlreadyExistsException();
                 SymbolTable.top.put(new SymbolTableFieldItem(name));
             }
             catch (ItemAlreadyExistsException e) {
@@ -525,10 +527,14 @@ public class TreePrinter implements Visitor<Void> {
                 } catch (ItemAlreadyExistsException e1) {
                     // dige kheili bad shansi:))
                 }
-
-                Program.addError("Error:Line:" + Integer.toString(fieldDeclaration.getName().line)
-                        + ":Redefinition of Field " + fieldDeclaration.getName().getName() + "\n");
-
+                if (name.equals("length")) {
+                    Program.addError("Error:Line:" + Integer.toString(fieldDeclaration.getName().line)
+                            + ":Definition of length as field of a class\n");
+                }
+                else {
+                    Program.addError("Error:Line:" + Integer.toString(fieldDeclaration.getName().line)
+                            + ":Redefinition of Field " + fieldDeclaration.getName().getName() + "\n");
+                }
             }
         }
         else {
@@ -648,10 +654,7 @@ public class TreePrinter implements Visitor<Void> {
             cd.accept(this);
 
         if(Program.hasError()) {
-            ArrayList<String> errors = Program.getErrors();
-            for (String str: errors) {
-                System.out.print(str);
-            }
+            Program.printErrors();
             return null;
         }
 
